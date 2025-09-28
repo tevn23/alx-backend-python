@@ -2,10 +2,13 @@ from rest_framework import viewsets, status, filters, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
 from .permissions import IsOwnerOrParticipant
+from .filters import MessageFilter
+from .pagination import MessagePagination
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -46,11 +49,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Messages.
+    - Supports pagination and filtering
     """
     serializer_class = MessageSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['sender__email', 'conversation__conversation_id', 'message_body']
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrParticipant]
+    pagination_class = MessagePagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MessageFilter
+    search_fields = ["sender__email", "message_body"]
+    ordering_fields = ["timestamp"]
 
     def get_queryset(self):
         return Message.objects.filter(conversation__participants=self.request.user)
@@ -59,12 +66,11 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Check if user is in conversation
         conversation = serializer.validated_data.get("conversation")
         if request.user not in conversation.participants.all():
             return Response(
                 {"detail": "You cannot send messages in a conversation you are not part of."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         self.perform_create(serializer)
