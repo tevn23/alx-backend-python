@@ -10,6 +10,10 @@ class IsOwnerOrParticipant(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
+        # Always allow superusers
+        if request.user and request.user.is_superuser:
+            return True
+            
         # For Conversation
         if hasattr(obj, 'participants'):
             return request.user in obj.participants.all()

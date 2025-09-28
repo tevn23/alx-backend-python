@@ -1,24 +1,29 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status, filters
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, status, filters, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
+from .permissions import IsOwnerOrParticipant
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Conversations.
-    - list all conversations
+    - list all conversations (only user’s own)
     - create a new conversation
     - custom action: list messages in a conversation
     """
-    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['participants__email', 'participants__first_name', 'participants__last_name']
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrParticipant]
+
+    def get_queryset(self):
+        """Limit conversations to only those the user participates in."""
+        user = self.request.user
+        return Conversation.objects.filter(participants=user)
 
     def create(self, request, *args, **kwargs):
         """
@@ -30,7 +35,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
             return Response({"error": "Participants required"}, status=status.HTTP_400_BAD_REQUEST)
 
         conversation = Conversation.objects.create()
-        conversation.participants.set(participants)  # ManyToMany assignment
+        conversation.participants.set(participants + [request.user.id])  # ensure creator is included
         serializer = self.get_serializer(conversation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -40,7 +45,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         Custom endpoint: /conversations/{id}/messages/
         Lists messages in this conversation.
         """
-        conversation = self.get_object()
+        conversation = self.get_object()  # permission check runs here
         messages = conversation.messages.all()
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
@@ -49,13 +54,18 @@ class ConversationViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Messages.
-    - list all messages
+    - list messages (only those in user’s conversations)
     - create a message in a conversation
     """
-    queryset = Message.objects.all()
     serializer_class = MessageSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['sender__email', 'conversation__conversation_id', 'message_body']
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrParticipant]
+
+    def get_queryset(self):
+        """Limit messages to only those in conversations the user is part of."""
+        user = self.request.user
+        return Message.objects.filter(conversation__participants=user)
 
     def create(self, request, *args, **kwargs):
         """
