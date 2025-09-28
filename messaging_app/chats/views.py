@@ -17,7 +17,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    filter_backends = [filters.SearchFilters]
+    filter_backends = [filters.SearchFilter]
     search_fields = ['participants__email', 'participants__first_name', 'participants__last_name']
 
     def create(self, request, *args, **kwargs):
@@ -54,7 +54,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    filter_backends = [filters.SearchFilters]
+    filter_backends = [filters.SearchFilter]
     search_fields = ['sender__email', 'conversation__conversation_id', 'message_body']
 
     def create(self, request, *args, **kwargs):

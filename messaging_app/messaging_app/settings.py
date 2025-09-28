@@ -23,9 +23,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'q_-u=*1-=^8l*u)-dl7lx+xwrjtl$!p@a%y3x%0!#3lfi=m*yf'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     # Local apps
     'chats',
 ]
+
+# Custom user model
+AUTH_USER_MODEL = 'chats.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -129,8 +132,19 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         
     ],
+}
+
+from datetime import timedelta
+from rest_framework_simplejwt.settings import api_settings
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'user_id',        # use your custom primary key
+    'USER_ID_CLAIM': 'user_id',        # optional: name of the claim in JWT payload
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
