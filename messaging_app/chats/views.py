@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
@@ -17,6 +17,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
+    filter_backends = [filters.SearchFilters]
+    search_fields = ['participants__email', 'participants__first_name', 'participants__last_name']
 
     def create(self, request, *args, **kwargs):
         """
@@ -52,6 +54,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
+    filter_backends = [filters.SearchFilters]
+    search_fields = ['sender__email', 'conversation__conversation_id', 'message_body']
 
     def create(self, request, *args, **kwargs):
         """
