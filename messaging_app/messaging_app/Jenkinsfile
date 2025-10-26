@@ -1,19 +1,33 @@
 pipeline {
     agent any
-
     environment {
         DOCKER_IMAGE = "messaging_app"
         DOCKER_TAG = "${BUILD_NUMBER}"
         DOCKER_REGISTRY = "docker.io"
     }
-
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                sh 'git branch'
             }
         }
-
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    echo 'Installing Python dependencies...'
+                    sh 'pip3 install -r messaging_app/requirements.txt'
+                }
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                script {
+                    echo 'Running tests with pytest...'
+                    sh 'pytest'
+                }
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 script {
@@ -23,7 +37,6 @@ pipeline {
                 }
             }
         }
-
         stage('Test') {
             steps {
                 script {
@@ -32,7 +45,6 @@ pipeline {
                 }
             }
         }
-
         stage('Push to Registry') {
             steps {
                 script {
@@ -46,7 +58,6 @@ pipeline {
             }
         }
     }
-
     post {
         always {
             echo 'Cleaning up...'
